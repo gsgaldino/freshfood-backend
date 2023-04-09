@@ -21,7 +21,7 @@
   },
   "scripts": {
     "dev": "NODE_ENV=development tsnd -r tsconfig-paths/register --respawn --transpile-only src/index.ts",
-    "test:unit": "NODE_ENV=test jest --testPathPattern=src/",
+    "test:unit": "NODE_ENV=test jest --testPathPattern=src/ --verbose",
     "test": "yarn test:unit"
   },
   "dependencies": {

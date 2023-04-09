@@ -1,40 +1,40 @@
 import { IUserRepository } from '@/repositories';
-import { ICreateUserDTO } from './CreateUserDTO';
 import { CreateUserUseCase } from './CreateUserUseCase';
+import { ICreateUserDTO } from './CreateUserDTO';
+
+const userRepository: IUserRepository = {
+  findByEmail: jest.fn(),
+  save: jest.fn(),
+};
+
+const createUserUseCase = new CreateUserUseCase(userRepository);
+
+const createUserDto: ICreateUserDTO = {
+  email: 'johndoe@example.com',
+  name: 'John Doe',
+  password: '1234',
+  address: 'Sample address',
+  phone: '(11)998989898'
+};
 
 describe('CreateUserUseCase', () => {
-  const user: ICreateUserDTO = { email: 'test@example.com', password: 'password', name: 'John Doe' };
-  let userRepository: IUserRepository;
-  let createUserUseCase: CreateUserUseCase;
+  it('should throw an error when the user already exists', async () => {
+    (userRepository.findByEmail as jest.Mock).mockResolvedValueOnce({ _id: Date.now() });
 
-  beforeEach(() => {
-    userRepository = {
-      findByEmail: jest.fn(),
-      save: jest.fn(),
-    };
-    createUserUseCase = new CreateUserUseCase(userRepository);
+    await expect(createUserUseCase.execute(createUserDto)).rejects.toThrow('User already exists');
+    expect(userRepository.findByEmail).toHaveBeenCalledWith(createUserDto.email);
+    expect(userRepository.save).not.toHaveBeenCalled();
   });
 
-  describe('execute', () => {
-    it('should save a new user when there is no existing user with the same email', async () => {
-      (userRepository.findByEmail as jest.Mock).mockReturnValueOnce(null);
-      (userRepository.save as jest.Mock).mockReturnValueOnce({ ...user, id: '1' });
+  it('should save a user when there is no existing user with the same email', async () => {
+    const expectedUSer = { _id: Date.now() };
+    (userRepository.findByEmail as jest.Mock).mockResolvedValueOnce(null);
+    (userRepository.save as jest.Mock).mockResolvedValueOnce(expectedUSer);
 
-      const result = await createUserUseCase.execute(user);
+    const result = await createUserUseCase.execute(createUserDto);
 
-      expect(result).toEqual({ ...user, id: '1' });
-      expect(userRepository.findByEmail).toHaveBeenCalledWith('test@example.com');
-      expect(userRepository.save).toHaveBeenCalledWith(user);
-    });
-
-    it('should throw an error when there is an existing user with the same email', async () => {
-      (userRepository.findByEmail as jest.Mock).mockReturnValueOnce({ ...user, id: '1' });
-
-      const result = createUserUseCase.execute(user);
-
-      await expect(result).rejects.toThrow('User already exists.');
-      expect(userRepository.findByEmail).toHaveBeenCalledWith('test@example.com');
-      expect(userRepository.save).not.toHaveBeenCalled();
-    });
+    expect(result).toStrictEqual(expectedUSer);
+    expect(userRepository.findByEmail).toHaveBeenCalledWith(createUserDto.email);
+    expect(userRepository.save).toHaveBeenCalledWith(createUserDto);
   });
 });

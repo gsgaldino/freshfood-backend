@@ -1,39 +1,50 @@
+import type { Request, Response } from 'express';
+
 import { CreateLocalProducerController } from './CreateLocalProducerController';
 import { CreateLocalProducerUseCase } from './CreateLocalProducerUseCase';
-import { ICreateLocalProducerDTO } from './CreateLocalProducerDTO';
-import { ILocalProducerRepository } from '../../../repositories';
+
+const createLocalProducerUseCaseMock = {
+  execute: jest.fn(),
+} as unknown as CreateLocalProducerUseCase;
+
+const createLocalProducerController = new CreateLocalProducerController(createLocalProducerUseCaseMock);
+
+const req = {
+  body: {
+    email: 'johndoe@example.com',
+    name: 'John Doe',
+    address: 'Example address',
+  },
+} as Request;
+
+const res = {
+  status: jest.fn().mockReturnThis(),
+  json: jest.fn(),
+} as unknown as Response;
 
 describe('CreateLocalProducerController', () => {
-  const localProducerRepository: ILocalProducerRepository = {
-    findByEmail: jest.fn(),
-    save: jest.fn(),
-  };
-  const createLocalProducerUseCase = new CreateLocalProducerUseCase(localProducerRepository);
-  const createLocalProducerController = new CreateLocalProducerController(createLocalProducerUseCase);
-  const localProducerPayload: ICreateLocalProducerDTO = {
-    address: 'fake address',
-    email: 'johdoe@example.com',
-    name: 'John Doe'
-  };
-  const request: any = {
-    body: localProducerPayload,
-  };
-  const response: any = {
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn(),
-  };
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
-  it('should be ok', async () => {
-    
-    const saved = { ...localProducerPayload, products: [] };
+  it('should send a error if local producer already exists', async () => {
+    (createLocalProducerUseCaseMock.execute as jest.Mock).mockRejectedValueOnce(new Error('Local producer already exists'));
 
-    jest.spyOn(localProducerRepository, 'findByEmail').mockResolvedValueOnce(null);
-    jest.spyOn(localProducerRepository, 'save').mockResolvedValueOnce(saved);
-    expect(true).toBeTruthy();
+    await createLocalProducerController.handle(req, res);
 
-    await createLocalProducerController.handle(request, response);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: 'Unexpected error',
+    });
+  });
 
-    expect(localProducerRepository.findByEmail).toHaveBeenCalledWith(localProducerPayload.email);
-    expect(localProducerRepository.save).toHaveBeenCalledWith(localProducerPayload);
+  it('should create a local producer and send it into response', async () => {
+    const localProducer = req.body;
+    (createLocalProducerUseCaseMock.execute as jest.Mock).mockResolvedValueOnce(localProducer);
+
+    await createLocalProducerController.handle(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({ success: true, localProducer });
   });
 });

@@ -1,3 +1,3 @@
 import { IOrder } from '@/types';
 
-export type CreateOrderDTO = Pick<IOrder, 'products' | 'status' | 'total'>;
+export type CreateOrderDTO = Partial<Pick<IOrder, 'products' | 'status' | 'total' | 'user'>>;

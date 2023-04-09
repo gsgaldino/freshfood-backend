@@ -10,7 +10,8 @@ export enum OrderStatus {
 
 export interface IOrder {
   createdAt?: Date;
-  products: IProduct[];
-  status: OrderStatus;
-  total: number;
+  products?: IProduct[];
+  status?: OrderStatus;
+  total?: number;
+  user?: string;
 }

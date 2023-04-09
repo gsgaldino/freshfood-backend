@@ -12,7 +12,7 @@ export class CreateLocalProducerController {
 
       return res.json({ success: true, localProducer });
     } catch (error) {
-      res.status(400).json({ success: true, message: 'Unexpected error' });
+      res.status(400).json({ success: false, message: 'Unexpected error' });
     }
   }
 }

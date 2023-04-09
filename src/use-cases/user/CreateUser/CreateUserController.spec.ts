@@ -1,71 +1,52 @@
-import { IUserRepository } from '@/repositories';
+import type { Request, Response } from 'express';
+
 import { CreateUserController } from './CreateUserController';
 import { CreateUserUseCase } from './CreateUserUseCase';
-import { ICreateUserDTO } from './CreateUserDTO';
+
+const createUserUseCaseMock = {
+  execute: jest.fn(),
+} as unknown as CreateUserUseCase;
+
+const createUserController = new CreateUserController(createUserUseCaseMock);
+
+const req = {
+  body: {
+    email: 'johndoe@example.com',
+    name: 'John Doe',
+    password: '1234',
+    address: 'Example address',
+    phone: '(11)998989898',
+  },
+} as Request;
+
+const res = {
+  status: jest.fn().mockReturnThis(),
+  json: jest.fn(),
+} as unknown as Response;
 
 describe('CreateUserController', () => {
-  let userRepository: IUserRepository;
-  let createUserUseCase: CreateUserUseCase;
-  let createUserController: CreateUserController;
-  let req: any;
-  let res: any;
-
   beforeEach(() => {
-    userRepository = {
-      findByEmail: jest.fn(),
-      save: jest.fn(),
-    };
-    createUserUseCase = new CreateUserUseCase(userRepository);
-    createUserController = new CreateUserController(createUserUseCase);
-    req = {
-      body: {
-        name: 'John Doe',
-        email: 'johndoe@example.com',
-        password: 'password123',
-      },
-    };
-    res = {
-      json: jest.fn(),
-      status: jest.fn().mockReturnThis(),
-    };
+    jest.clearAllMocks();
   });
 
-  it('should create a new user and return it in the response', async () => {
-    const user: ICreateUserDTO = req.body;
-    jest.spyOn(userRepository, 'findByEmail').mockResolvedValueOnce(null);
-    jest.spyOn(userRepository, 'save').mockResolvedValueOnce(user);
+  it('should send a error if user already exists', async () => {
+    const expectedError = new Error('User already exists');
+    (createUserUseCaseMock.execute as jest.Mock).mockRejectedValueOnce(expectedError);
 
     await createUserController.handle(req, res);
 
-    expect(userRepository.findByEmail).toHaveBeenCalledWith(user.email);
-    expect(userRepository.save).toHaveBeenCalledWith(user);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false
+    });
+  });
+
+  it('should create a user and send it into response', async () => {
+    const user = req.body;
+    (createUserUseCaseMock.execute as jest.Mock).mockResolvedValueOnce(user);
+
+    await createUserController.handle(req, res);
+
     expect(res.json).toHaveBeenCalledWith({ user });
-  });
-
-  it('should return a 500 status code and an error message if an error occurs', async () => {
-    const user: ICreateUserDTO = req.body;
-    const error = new Error('Something went wrong');
-    jest.spyOn(userRepository, 'findByEmail').mockResolvedValueOnce(null);
-    jest.spyOn(userRepository, 'save').mockRejectedValueOnce(error);
-
-    await createUserController.handle(req, res);
-
-    expect(userRepository.findByEmail).toHaveBeenCalledWith(user.email);
-    expect(userRepository.save).toHaveBeenCalledWith(user);
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({ success: false });
-  });
-
-  it('should return a 500 status code and an error message if the user already exists', async () => {
-    const user: ICreateUserDTO = req.body;
-    const existing = { ...user, id: '123' };
-    jest.spyOn(userRepository, 'findByEmail').mockResolvedValueOnce(existing);
-
-    await createUserController.handle(req, res);
-
-    expect(userRepository.findByEmail).toHaveBeenCalledWith(user.email);
-    expect(userRepository.save).not.toHaveBeenCalled();
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({ success: false });
   });
 });

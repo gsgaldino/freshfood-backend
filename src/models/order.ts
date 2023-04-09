@@ -16,6 +16,10 @@ const orderSchema = new Schema<IOrder>({
     default: OrderStatus.PENDING,
   },
   total: Number,
+  user: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+  },
 });
 
 export const Order = model<IOrder>('Order', orderSchema);
